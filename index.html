@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwitchBoard — Interactive 3D Product Viewer</title>
+  <meta name="description" content="Interactive 3D product viewer for the SwitchBoard modular electrical switchboard with 3D rocker switches, socket outlet, power indicator, and photoluminescent symbols." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+  <!-- Three.js viewport -->
+  <div id="canvas-container"></div>
+
+  <!-- Loading overlay -->
+  <div id="loading">
+    <div class="loading-inner">
+      <div class="loading-ring"></div>
+      <span class="loading-text">Initialising 3D Scene</span>
+    </div>
+  </div>
+
+  <!-- Top-left brand -->
+  <header id="brand">
+    <span class="brand-mark">SB</span>
+    <div class="brand-text">
+      <span class="brand-name">SWITCHBOARD</span>
+      <span class="brand-sub">Modular Series · 7 Switches + Socket + Indicator</span>
+    </div>
+  </header>
+
+  <!-- Top-center active stats chip -->
+  <div id="status-chip" role="status" aria-live="polite">
+    <span class="chip-dot"></span>
+    <span id="status-chip-text">4 / 7 ON · 255W</span>
+  </div>
+
+  <!-- Top-right mode indicator -->
+  <div id="mode-indicator" aria-live="polite">
+    <span id="mode-dot"></span>
+    <span id="mode-label">Day Mode</span>
+  </div>
+
+  <!-- Right inspector panel -->
+  <aside id="inspector" role="complementary" aria-label="Component Inspector">
+    <div class="inspector-top-row">
+      <p class="inspector-header">Selected Component</p>
+      <span id="inspector-badge" class="badge-status badge-on">ON</span>
+    </div>
+    <p id="inspector-name" class="inspector-name">—</p>
+    <div class="inspector-divider"></div>
+    <div class="inspector-row">
+      <span class="inspector-label">MATERIAL</span>
+      <span id="inspector-material" class="inspector-value">—</span>
+    </div>
+    <div class="inspector-row">
+      <span class="inspector-label">CATEGORY</span>
+      <span id="inspector-category" class="inspector-value">—</span>
+    </div>
+    <div class="inspector-row" id="row-specs">
+      <span class="inspector-label">SPECIFICATIONS</span>
+      <span id="inspector-specs" class="inspector-value">—</span>
+    </div>
+    <div class="inspector-row" id="row-state">
+      <span class="inspector-label">CURRENT STATE</span>
+      <span id="inspector-state" class="inspector-value">—</span>
+    </div>
+    <button id="btn-toggle-switch" class="action-toggle-btn" aria-label="Toggle switch state">
+      <span class="toggle-icon">⚡</span>
+      <span id="toggle-btn-label">Turn OFF</span>
+    </button>
+    <button id="btn-deselect" class="deselect-btn" aria-label="Deselect component">Clear Selection</button>
+  </aside>
+
+  <!-- Bottom toolbar -->
+  <nav id="toolbar" role="toolbar" aria-label="Viewer controls">
+
+    <!-- Day / Night -->
+    <button id="btn-daynight" class="tool-btn" title="Toggle Night Mode" aria-pressed="false">
+      <span class="btn-icon" id="daynight-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </span>
+      <span class="btn-label">Day / Night</span>
+    </button>
+
+    <div class="sep"></div>
+
+    <!-- Toggle All switches -->
+    <button id="btn-toggle-all" class="tool-btn" title="Toggle all switches ON or OFF">
+      <span class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </span>
+      <span class="btn-label">Toggle All</span>
+    </button>
+
+    <!-- Exploded view -->
+    <button id="btn-explode" class="tool-btn" title="Toggle Exploded View" aria-pressed="false">
+      <span class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M6.34 6.34l2.83 2.83M14.83 14.83l2.83 2.83M17.66 6.34l-2.83 2.83M9.17 14.83l-2.83 2.83"/>
+        </svg>
+      </span>
+      <span class="btn-label">Exploded</span>
+    </button>
+
+    <div class="sep"></div>
+
+    <!-- Sound toggle -->
+    <button id="btn-sound" class="tool-btn active" title="Toggle mechanical click sound" aria-pressed="true">
+      <span class="btn-icon" id="sound-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        </svg>
+      </span>
+      <span class="btn-label">Sound</span>
+    </button>
+
+    <div class="sep"></div>
+
+    <!-- Orthographic / projection presets -->
+    <div class="view-group" role="group" aria-label="Camera view presets">
+      <button id="btn-persp" class="tool-btn view-btn" title="Perspective view" aria-pressed="true">
+        <span class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </span>
+        <span class="btn-label">3D</span>
+      </button>
+      <button id="btn-front" class="tool-btn view-btn" title="Front orthographic view" aria-pressed="false">
+        <span class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+          </svg>
+        </span>
+        <span class="btn-label">Front</span>
+      </button>
+      <button id="btn-side" class="tool-btn view-btn" title="Side orthographic view" aria-pressed="false">
+        <span class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+            <line x1="12" y1="4" x2="12" y2="20"/>
+          </svg>
+        </span>
+        <span class="btn-label">Side</span>
+      </button>
+      <button id="btn-top" class="tool-btn view-btn" title="Top orthographic view" aria-pressed="false">
+        <span class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </span>
+        <span class="btn-label">Top</span>
+      </button>
+    </div>
+
+    <div class="sep"></div>
+
+    <!-- Reset camera -->
+    <button id="btn-reset" class="tool-btn" title="Reset camera to default">
+      <span class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      </span>
+      <span class="btn-label">Reset</span>
+    </button>
+
+  </nav>
+
+  <!-- Hint text -->
+  <p id="hint">Click any switch to toggle ON/OFF in 3D &nbsp;·&nbsp; Drag to rotate &nbsp;·&nbsp; Scroll to zoom</p>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
